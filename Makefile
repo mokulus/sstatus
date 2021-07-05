@@ -1,27 +1,44 @@
 NAME=sstatus
-CC=gcc
 COMMON_FLAGS=-Wall -Wextra -Wpedantic -Wno-missing-field-initializers
 LDFLAGS=-lbsd -pthread
-RFLAGS=-O2
-DFLAGS=-Og -g
-FLAGS=$(COMMON_FLAGS)
+RFLAGS=-O2 $(COMMON_FLAGS)
+DFLAGS=-Og -g $(COMMON_FLAGS)
 
-SRC=sstatus.c
+SRC = $(wildcard *.c)
+HDR = $(wildcard *.h)
 
-release: FLAGS += $(RFLAGS)
-release: $(NAME)
+ROBJ = $(SRC:%.c=release/obj/%.o)
+DOBJ = $(SRC:%.c=debug/obj/%.o)
 
-debug: FLAGS += $(DFLAGS)
-debug: $(NAME)
+release: release/$(NAME)
 
-$(NAME): $(SRC)
-	$(CC) $(FLAGS) $(LDFLAGS) $^ -o $@
+release/$(NAME): $(ROBJ)
+	$(CC) $(RLAGS) $(LDFLAGS) $^ -o $@
+
+release/obj/%.o: %.c | release/obj
+	$(CC) $(RFLAGS) $^ -c -o $@
+
+release/obj:
+	mkdir -p $@
+
+
+debug: debug/$(NAME)
+
+debug/$(NAME): $(DOBJ)
+	$(CC) $(DLAGS) $(LDFLAGS) $^ -o $@
+
+debug/obj/%.o: %.c | debug/obj
+	$(CC) $(DFLAGS) $^ -c -o $@
+
+debug/obj:
+	mkdir -p $@
+
 
 clean:
-	rm -f $(NAME)
+	rm -rf $(NAME) release debug
 
 install: release
-	cp -f $(NAME) /usr/local/bin/$(NAME)
+	cp -f release/$(NAME) /usr/local/bin/$(NAME)
 
 uninstall:
 	rm -f /usr/local/bin/$(NAME)
