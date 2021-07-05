@@ -1,15 +1,15 @@
+#include <bsd/string.h>
+#include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/types.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <sys/wait.h>
-#include <bsd/string.h>
+#include <unistd.h>
 
-#include "util.h"
 #include "buf.h"
+#include "util.h"
 
 typedef struct mod {
 	union {
@@ -25,7 +25,8 @@ typedef struct mod {
 	pthread_t thread;
 } mod;
 
-void *mod_routine(void *vm) {
+void *mod_routine(void *vm)
+{
 	mod *m = (mod *)vm;
 	for (;;) {
 		char *str = m->fp.basic();
@@ -43,7 +44,8 @@ void *mod_routine(void *vm) {
 	}
 }
 
-void *mpc_status_routine(void *vm) {
+void *mpc_status_routine(void *vm)
+{
 	mod *m = vm;
 	for (;;) {
 		int p[2];
@@ -55,13 +57,17 @@ void *mpc_status_routine(void *vm) {
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
-			execvp("sh", (char * const []){"sh", "-c",
-					"mpc status | "
-					"sed 1q | "
-					"grep -v 'volume: n/a' | "
-					/* "tr -dc '[:print:]' | " */
-					"awk '{ if ($0 ~ /.{30,}/) { print substr($0, 1, 29) \"…\" } else { print $0 } }'"
-					, (char *) NULL});
+			execvp("sh", (char *const[]) {
+				"sh", "-c",
+				"mpc status | "
+				"sed 1q | "
+				"grep -v 'volume: n/a' | "
+				/* "tr -dc '[:print:]' | " */
+				"awk '{ if ($0 ~ /.{30,}/) { print "
+				"substr($0, 1, "
+				"29) \"…\" } else { print $0 } }'",
+				(char *)NULL
+			});
 			exit(1);
 		}
 		close(p[1]);
@@ -82,14 +88,16 @@ void *mpc_status_routine(void *vm) {
 		pthread_cond_signal(m->update_cond);
 		pthread_mutex_unlock(m->update_mutex);
 
-
 		id = fork();
 		if (id == -1)
 			return NULL;
 		if (id == 0) {
 			int fd = open("/dev/null", O_WRONLY);
 			dup2(fd, 1);
-			execvp("mpc", (char * const []){"mpc", "idle", (char *) NULL});
+			execvp("mpc",
+			(char *const[]) {
+				"mpc", "idle", (char *)NULL
+			});
 			exit(1);
 		}
 		waitpid(id, NULL, 0);
@@ -98,13 +106,14 @@ void *mpc_status_routine(void *vm) {
 }
 
 static mod mods[] = {
-	{ { .adv = mpc_status_routine}, 0 },
-	{ {load_average}, 60 * 1000 },
-	{ {battery_level}, 10 * 1000 },
-	{ {datetime}, 60 * 1000 },
+	{{.adv = mpc_status_routine}, 0},
+	{{load_average}, 60 * 1000},
+	{{battery_level}, 10 * 1000},
+	{{datetime}, 60 * 1000},
 };
 
-int main() {
+int main()
+{
 	const size_t mod_count = sizeof(mods) / sizeof(mod);
 	pthread_cond_t update_cond;
 	pthread_cond_init(&update_cond, NULL);

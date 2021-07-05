@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-void buf_init(buf *b) {
+void buf_init(buf *b)
+{
 	b->cap = 32;
 	b->len = 0;
 	b->buf = malloc(b->cap);
 	b->buf[0] = '\0';
 }
 
-void buf_append(buf *b, char *str) {
+void buf_append(buf *b, char *str)
+{
 	if (!str)
 		return;
 	const size_t len = strlen(str);

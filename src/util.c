@@ -1,10 +1,11 @@
 #include "util.h"
-#include <time.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+#include <time.h>
 
-char *load_average() {
+char *load_average()
+{
 	char *str = NULL;
 	FILE *f = fopen("/proc/loadavg", "r");
 	if (!f)
@@ -22,7 +23,8 @@ fail:
 	return str;
 }
 
-char *datetime() {
+char *datetime()
+{
 	const char *format = "%a %d %b %H:%M";
 
 	size_t n = 64;
@@ -42,7 +44,8 @@ char *datetime() {
 	return str;
 }
 
-char *battery_level() {
+char *battery_level()
+{
 	char *str = NULL;
 	FILE *f = fopen("/sys/class/power_supply/BAT0/capacity", "r");
 	if (!f)
@@ -57,7 +60,8 @@ fail:
 	return str;
 }
 
-void msleep(size_t ms) {
+void msleep(size_t ms)
+{
 	time_t sec = ms / 1000;
 	long rem = ms % 1000;
 	struct timespec ts = {sec, 1e6 * rem};
