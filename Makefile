@@ -4,18 +4,18 @@ LDFLAGS=-lbsd -pthread
 RFLAGS=-O2 $(COMMON_FLAGS)
 DFLAGS=-Og -g $(COMMON_FLAGS)
 
-SRC = $(wildcard *.c)
-HDR = $(wildcard *.h)
+SRC = $(wildcard src/*.c)
+HDR = $(wildcard src/*.h)
 
-ROBJ = $(SRC:%.c=release/obj/%.o)
-DOBJ = $(SRC:%.c=debug/obj/%.o)
+ROBJ = $(SRC:src/%.c=release/obj/%.o)
+DOBJ = $(SRC:src/%.c=debug/obj/%.o)
 
 release: release/$(NAME)
 
 release/$(NAME): $(ROBJ)
 	$(CC) $(RLAGS) $(LDFLAGS) $^ -o $@
 
-release/obj/%.o: %.c | release/obj
+release/obj/%.o: src/%.c | release/obj
 	$(CC) $(RFLAGS) $^ -c -o $@
 
 release/obj:
@@ -27,7 +27,7 @@ debug: debug/$(NAME)
 debug/$(NAME): $(DOBJ)
 	$(CC) $(DLAGS) $(LDFLAGS) $^ -o $@
 
-debug/obj/%.o: %.c | debug/obj
+debug/obj/%.o: src/%.c | debug/obj
 	$(CC) $(DFLAGS) $^ -c -o $@
 
 debug/obj:
