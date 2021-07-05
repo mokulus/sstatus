@@ -34,6 +34,9 @@ debug/obj:
 	mkdir -p $@
 
 
+format: $(SRC) $(HDR)
+	astyle -n --style=linux --indent=tab $^
+
 clean:
 	rm -rf $(NAME) release debug
 
@@ -43,4 +46,4 @@ install: release
 uninstall:
 	rm -f /usr/local/bin/$(NAME)
 
-.PHONY: release debug clean install uninstall
+.PHONY: release debug format clean install uninstall
