@@ -28,7 +28,7 @@ fail:
 }
 
 char *datetime() {
-	const char *format = "%c";
+	const char *format = "%a %d %b %H:%M";
 
 	size_t n = 64;
 	char *str = malloc(n);
@@ -62,46 +62,11 @@ fail:
 	return str;
 }
 
-char *mpc_status() {
-	pid_t id = fork();
-	if (id == -1)
-		return NULL;
-	if (id == 0) {
-		int fd = open("/dev/null", O_WRONLY);
-		dup2(fd, 1);
-		execvp("mpc", (char * const []){"mpc", "idle", (char *) NULL});
-		exit(1);
-	}
-	waitpid(id, NULL, 0);
-	int p[2];
-	if (pipe(p) == -1)
-		return NULL;
-	id = fork();
-	if (id == -1)
-		return NULL;
-	if (id == 0) {
-		close(p[0]);
-		dup2(p[1], 1);
-		execvp("sh", (char * const []){"sh", "-c",
-				"mpc status | "
-				"sed 1q | "
-				"grep -v 'volume: n/a' | "
-				/* "tr -dc '[:print:]' | " */
-				"awk '{ if ($0 ~ /.{30,}/) { print substr($0, 1, 29) \"…\" } else { print $0 } }'"
-				, (char *) NULL});
-	}
-	close(p[1]);
-	char *str = NULL;
-	size_t n = 0;
-	FILE *f = fdopen(p[0], "r");
-	size_t read = getline(&str, &n, f);
-	str[read - 1] = '\0';
-	fclose(f);
-	return str;
-}
-
 typedef struct mod {
-	char *(*fp)();
+	union {
+		char *(*basic)();
+		void *(*adv)(void *vp);
+	} fp;
 	size_t interval;
 	char *store;
 	pthread_mutex_t store_mutex;
@@ -111,17 +76,17 @@ typedef struct mod {
 	pthread_t thread;
 } mod;
 
-static mod mods[] = {
-	{ mpc_status, 0 },
-	{ load_average, 1000 },
-	{ battery_level, 1000 },
-	{ datetime, 1000 },
-};
+void msleep(size_t ms) {
+	time_t sec = ms / 1000;
+	long rem = ms % 1000;
+	struct timespec ts = {sec, 1e6 * rem};
+	nanosleep(&ts, NULL);
+}
 
 void *mod_routine(void *vm) {
 	mod *m = (mod *)vm;
 	for (;;) {
-		char *str = m->fp();
+		char *str = m->fp.basic();
 		pthread_mutex_lock(&m->store_mutex);
 		free(m->store);
 		m->store = str;
@@ -132,9 +97,62 @@ void *mod_routine(void *vm) {
 		pthread_cond_signal(m->update_cond);
 		pthread_mutex_unlock(m->update_mutex);
 
-		if (m->interval)
-			usleep(m->interval);
+		msleep(m->interval);
 	}
+}
+
+void *mpc_status_routine(void *vm) {
+	mod *m = vm;
+	for (;;) {
+		int p[2];
+		if (pipe(p) == -1)
+			return NULL;
+		pid_t id = fork();
+		if (id == -1)
+			return NULL;
+		if (id == 0) {
+			close(p[0]);
+			dup2(p[1], 1);
+			execvp("sh", (char * const []){"sh", "-c",
+					"mpc status | "
+					"sed 1q | "
+					"grep -v 'volume: n/a' | "
+					/* "tr -dc '[:print:]' | " */
+					"awk '{ if ($0 ~ /.{30,}/) { print substr($0, 1, 29) \"…\" } else { print $0 } }'"
+					, (char *) NULL});
+			exit(1);
+		}
+		close(p[1]);
+		char *str = NULL;
+		size_t n = 0;
+		FILE *f = fdopen(p[0], "r");
+		size_t read = getline(&str, &n, f);
+		str[read - 1] = '\0';
+		fclose(f);
+
+		pthread_mutex_lock(&m->store_mutex);
+		free(m->store);
+		m->store = str;
+		pthread_mutex_unlock(&m->store_mutex);
+
+		pthread_mutex_lock(m->update_mutex);
+		*m->update = 1;
+		pthread_cond_signal(m->update_cond);
+		pthread_mutex_unlock(m->update_mutex);
+
+
+		id = fork();
+		if (id == -1)
+			return NULL;
+		if (id == 0) {
+			int fd = open("/dev/null", O_WRONLY);
+			dup2(fd, 1);
+			execvp("mpc", (char * const []){"mpc", "idle", (char *) NULL});
+			exit(1);
+		}
+		waitpid(id, NULL, 0);
+	}
+	return NULL;
 }
 
 typedef struct buf {
@@ -163,6 +181,13 @@ void buf_append(buf *b, char *str) {
 	b->buf[b->len] = '\0';
 }
 
+static mod mods[] = {
+	{ { .adv = mpc_status_routine}, 0 },
+	{ {load_average}, 60 * 1000 },
+	{ {battery_level}, 10 * 1000 },
+	{ {datetime}, 60 * 1000 },
+};
+
 int main() {
 	/* printf("%s\n", load_average()); */
 	/* printf("%s\n", battery_level()); */
@@ -180,7 +205,10 @@ int main() {
 		m->update = &update;
 		m->update_cond = &update_cond;
 		m->update_mutex = &update_mutex;
-		pthread_create(&m->thread, NULL, mod_routine, m);
+		if (m->interval)
+			pthread_create(&m->thread, NULL, mod_routine, m);
+		else
+			pthread_create(&m->thread, NULL, m->fp.adv, m);
 	}
 	char *oldbuf = strdup("");
 	buf b;
@@ -202,7 +230,8 @@ int main() {
 			pthread_mutex_unlock(&m->store_mutex);
 		}
 		if (strcmp(b.buf, oldbuf)) {
-			printf("%s\n", b.buf);
+			puts(b.buf);
+			fflush(stdout);
 		}
 		free(oldbuf);
 		oldbuf = b.buf;
