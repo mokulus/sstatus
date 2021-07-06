@@ -9,7 +9,7 @@ typedef struct buf {
 	size_t cap;
 } buf;
 
-void buf_init(buf *b);
-void buf_append(buf *b, char *str);
+int buf_init(buf *b);
+int buf_append(buf *b, char *str);
 
 #endif

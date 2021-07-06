@@ -134,7 +134,8 @@ int main()
 	}
 	char *oldbuf = strdup("");
 	buf b;
-	buf_init(&b);
+	if (!buf_init(&b))
+		return 1;
 	for (;;) {
 		pthread_mutex_lock(&update_mutex);
 		while (!update)
