@@ -2,13 +2,14 @@ NAME=sstatus
 COMMON_FLAGS=-Wall -Wextra -Wpedantic -Wno-missing-field-initializers
 LDFLAGS=-lbsd -pthread
 RFLAGS=-O2 $(COMMON_FLAGS)
-DFLAGS=-Og -g $(COMMON_FLAGS)
+DFLAGS=-Og -g -fanalyzer $(COMMON_FLAGS)
 
 SRC = $(wildcard src/*.c)
 HDR = $(wildcard src/*.h)
 
 ROBJ = $(SRC:src/%.c=release/obj/%.o)
 DOBJ = $(SRC:src/%.c=debug/obj/%.o)
+
 
 release: release/$(NAME)
 
