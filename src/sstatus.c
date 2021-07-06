@@ -154,10 +154,9 @@ int main()
 		if (strcmp(b.buf, oldbuf)) {
 			puts(b.buf);
 			fflush(stdout);
+			free(oldbuf);
+			oldbuf = strdup(b.buf);
 		}
-		free(oldbuf);
-		oldbuf = b.buf;
-		b.buf = malloc(b.cap);
 		b.len = 0;
 	}
 }
