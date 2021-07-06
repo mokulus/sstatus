@@ -13,7 +13,7 @@ DOBJ = $(SRC:src/%.c=debug/obj/%.o)
 release: release/$(NAME)
 
 release/$(NAME): $(ROBJ)
-	$(CC) $(RLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(RFLAGS) $(LDFLAGS) $^ -o $@
 
 release/obj/%.o: src/%.c | release/obj
 	$(CC) $(RFLAGS) $^ -c -o $@
@@ -25,7 +25,7 @@ release/obj:
 debug: debug/$(NAME)
 
 debug/$(NAME): $(DOBJ)
-	$(CC) $(DLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(DFLAGS) $(LDFLAGS) $^ -o $@
 
 debug/obj/%.o: src/%.c | debug/obj
 	$(CC) $(DFLAGS) $^ -c -o $@
