@@ -25,7 +25,7 @@ fail:
 
 char *datetime()
 {
-	const char *format = "%a %d %b %H:%M";
+	const char *format = "%a %-d %b %H:%M";
 
 	size_t n = 64;
 	char *str = malloc(n);
