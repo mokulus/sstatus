@@ -102,9 +102,9 @@ void *mpc_status_routine(void *vm)
 
 static mod mods[] = {
     {.fp = {.adv = mpc_status_routine}, .interval = 0},
-    {.fp = {load_average}, .interval = 1000},
-    {.fp = {battery_level}, .interval = 1000},
-    {.fp = {datetime}, .interval = 60 * 1000},
+    {.fp = {.basic = load_average}, .interval = 1000},
+    {.fp = {.basic = battery_level}, .interval = 1000},
+    {.fp = {.basic = datetime}, .interval = 60 * 1000},
 };
 
 int main()
