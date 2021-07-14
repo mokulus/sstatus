@@ -15,7 +15,7 @@ int buf_init(buf *b)
 	return 1;
 }
 
-int buf_append(buf *b, char *str)
+int buf_append(buf *b, const char *str)
 {
 	if (!str)
 		return 1;

@@ -10,6 +10,6 @@ typedef struct buf {
 } buf;
 
 int buf_init(buf *b);
-int buf_append(buf *b, char *str);
+int buf_append(buf *b, const char *str);
 
 #endif

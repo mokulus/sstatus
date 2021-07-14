@@ -16,7 +16,7 @@ typedef struct mod {
 		char *(*basic)();
 		void *(*adv)(void *vp);
 	} fp;
-	size_t interval;
+	time_t interval;
 	char *store;
 	pthread_mutex_t store_mutex;
 	int *update;
@@ -57,24 +57,22 @@ void *mpc_status_routine(void *vm)
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
-			execvp("sh", (char *const[]) {
-				"sh", "-c",
-				"mpc status | "
-				"sed 1q | "
-				"grep -v 'volume: n/a' | "
-				/* "tr -dc '[:print:]' | " */
-				"awk '{ if ($0 ~ /.{30,}/) { print "
-				"substr($0, 1, "
-				"29) \"…\" } else { print $0 } }'",
-				(char *)NULL
-			});
+			execlp("sh", "sh", "-c",
+			       "mpc status | "
+			       "sed 1q | "
+			       "grep -v 'volume: n/a' | "
+			       /* "tr -dc '[:print:]' | " */
+			       "awk '{ if ($0 ~ /.{30,}/) { print "
+			       "substr($0, 1, "
+			       "29) \"…\" } else { print $0 } }'",
+			       (char *)NULL);
 			exit(1);
 		}
 		close(p[1]);
 		char *str = NULL;
 		size_t n = 0;
 		FILE *f = fdopen(p[0], "r");
-		size_t read = getline(&str, &n, f);
+		ssize_t read = getline(&str, &n, f);
 		str[read - 1] = '\0';
 		fclose(f);
 
@@ -94,10 +92,7 @@ void *mpc_status_routine(void *vm)
 		if (id == 0) {
 			int fd = open("/dev/null", O_WRONLY);
 			dup2(fd, 1);
-			execvp("mpc",
-			(char *const[]) {
-				"mpc", "idle", (char *)NULL
-			});
+			execlp("mpc", "mpc", "idle", (char *)NULL);
 			exit(1);
 		}
 		waitpid(id, NULL, 0);
@@ -106,10 +101,10 @@ void *mpc_status_routine(void *vm)
 }
 
 static mod mods[] = {
-	{{.adv = mpc_status_routine}, 0},
-	{{load_average}, 60 * 1000},
-	{{battery_level}, 10 * 1000},
-	{{datetime}, 60 * 1000},
+    {.fp = {.adv = mpc_status_routine}, .interval = 0},
+    {.fp = {load_average}, .interval = 1000},
+    {.fp = {battery_level}, .interval = 1000},
+    {.fp = {datetime}, .interval = 60 * 1000},
 };
 
 int main()
@@ -153,6 +148,7 @@ int main()
 			pthread_mutex_unlock(&m->store_mutex);
 		}
 		if (strcmp(b.buf, oldbuf)) {
+			fflush(stdout);
 			puts(b.buf);
 			fflush(stdout);
 			free(oldbuf);

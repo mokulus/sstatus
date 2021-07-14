@@ -2,10 +2,11 @@
 #define UTIL_H
 
 #include <stddef.h>
+#include <time.h>
 
 char *load_average();
 char *datetime();
 char *battery_level();
-void msleep(size_t ms);
+void msleep(time_t ms);
 
 #endif
