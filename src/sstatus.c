@@ -10,50 +10,17 @@
 
 #include "buf.h"
 #include "util.h"
+#include "mod.h"
 
-typedef struct mod {
-	union {
-		char *(*basic)();
-		void *(*adv)(void *vp);
-	} fp;
-	time_t interval;
-	char *store;
-	pthread_mutex_t store_mutex;
-	int *update;
-	pthread_cond_t *update_cond;
-	pthread_mutex_t *update_mutex;
-	pthread_t thread;
-} mod;
-
-void *mod_routine(void *vm)
+void mpc_status_routine(mod *m)
 {
-	mod *m = (mod *)vm;
-	for (;;) {
-		char *str = m->fp.basic();
-		pthread_mutex_lock(&m->store_mutex);
-		free(m->store);
-		m->store = str;
-		pthread_mutex_unlock(&m->store_mutex);
-
-		pthread_mutex_lock(m->update_mutex);
-		*m->update = 1;
-		pthread_cond_signal(m->update_cond);
-		pthread_mutex_unlock(m->update_mutex);
-
-		msleep(m->interval);
-	}
-}
-
-void *mpc_status_routine(void *vm)
-{
-	mod *m = vm;
 	for (;;) {
 		int p[2];
 		if (pipe(p) == -1)
-			return NULL;
+			return;
 		pid_t id = fork();
 		if (id == -1)
-			return NULL;
+			return;
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
@@ -88,7 +55,7 @@ void *mpc_status_routine(void *vm)
 
 		id = fork();
 		if (id == -1)
-			return NULL;
+			return;
 		if (id == 0) {
 			int fd = open("/dev/null", O_WRONLY);
 			dup2(fd, 1);
@@ -97,7 +64,6 @@ void *mpc_status_routine(void *vm)
 		}
 		waitpid(id, NULL, 0);
 	}
-	return NULL;
 }
 
 static mod mods[] = {
@@ -116,16 +82,7 @@ int main()
 	pthread_mutex_init(&update_mutex, NULL);
 	int update = 0;
 	for (size_t i = 0; i < mod_count; ++i) {
-		mod *m = &mods[i];
-		m->store = NULL;
-		pthread_mutex_init(&m->store_mutex, NULL);
-		m->update = &update;
-		m->update_cond = &update_cond;
-		m->update_mutex = &update_mutex;
-		if (m->interval)
-			pthread_create(&m->thread, NULL, mod_routine, m);
-		else
-			pthread_create(&m->thread, NULL, m->fp.adv, m);
+		mod_init(&mods[i], &update, &update_cond, &update_mutex);
 	}
 	char *oldbuf = strdup("");
 	buf b;
