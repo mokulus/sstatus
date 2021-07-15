@@ -33,3 +33,9 @@ int buf_append(buf *b, const char *str)
 	b->buf[b->len] = '\0';
 	return 1;
 }
+
+void buf_free(buf *b)
+{
+	free(b->buf);
+	free(b);
+}

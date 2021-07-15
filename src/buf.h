@@ -11,5 +11,6 @@ typedef struct buf {
 
 int buf_init(buf *b);
 int buf_append(buf *b, const char *str);
+void buf_free(buf *b);
 
 #endif

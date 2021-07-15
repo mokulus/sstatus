@@ -1,6 +1,7 @@
 #include <bsd/string.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,12 +10,37 @@
 #include <unistd.h>
 
 #include "buf.h"
-#include "util.h"
 #include "mod.h"
+#include "util.h"
+
+static volatile sig_atomic_t g_quit = 0;
+
+static void set_quit_handler(int signal)
+{
+	(void)signal;
+	g_quit = 1;
+}
+
+static void empty_handler(int signal) { (void)signal; }
 
 void mpc_status_routine(mod *m)
 {
-	for (;;) {
+	unsigned should_exit = 0;
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+	struct sigaction sa;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = empty_handler;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+		perror("couldn't register SIGUSR1 signal handler");
+		return;
+	}
+	while (!should_exit) {
 		int p[2];
 		if (pipe(p) == -1)
 			return;
@@ -62,8 +88,22 @@ void mpc_status_routine(mod *m)
 			execlp("mpc", "mpc", "idle", (char *)NULL);
 			exit(1);
 		}
-		waitpid(id, NULL, 0);
+		int rc = 0;
+		waitpid(id, &rc, 0);
+		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
+			fprintf(stderr, "mpc idle failed\n");
+			should_exit = 1;
+			continue;
+		}
+		pthread_mutex_lock(&m->exit_mutex);
+		should_exit = m->exit;
+		pthread_mutex_unlock(&m->exit_mutex);
 	}
+
+	pthread_mutex_lock(&m->store_mutex);
+	free(m->store);
+	m->store = NULL;
+	pthread_mutex_unlock(&m->store_mutex);
 }
 
 static mod mods[] = {
@@ -73,8 +113,27 @@ static mod mods[] = {
     {.fp = {.basic = datetime}, .interval = 60 * 1000},
 };
 
+static unsigned register_signals(void)
+{
+	struct sigaction sa;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = set_quit_handler;
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("couldn't register SIGINT signal handler");
+		return 0;
+	}
+	if (sigaction(SIGTERM, &sa, NULL) == -1) {
+		perror("couldn't register SIGTERM signal handler");
+		return 0;
+	}
+	return 1;
+}
+
 int main()
 {
+	if (!register_signals())
+		return 1;
 	const size_t mod_count = sizeof(mods) / sizeof(mod);
 	pthread_cond_t update_cond;
 	pthread_cond_init(&update_cond, NULL);
@@ -85,10 +144,14 @@ int main()
 		mod_init(&mods[i], &update, &update_cond, &update_mutex);
 	}
 	char *oldbuf = strdup("");
-	buf b;
-	if (!buf_init(&b))
+	buf *b = malloc(sizeof(*b));
+	if (!b)
 		return 1;
-	for (;;) {
+	if (!buf_init(b)) {
+		free(b);
+		return 1;
+	}
+	while (!g_quit) {
 		pthread_mutex_lock(&update_mutex);
 		while (!update)
 			pthread_cond_wait(&update_cond, &update_mutex);
@@ -99,18 +162,34 @@ int main()
 			mod *m = &mods[i];
 			pthread_mutex_lock(&m->store_mutex);
 			if (m->store && strcmp(m->store, "")) {
-				buf_append(&b, " | ");
-				buf_append(&b, m->store);
+				buf_append(b, " | ");
+				buf_append(b, m->store);
 			}
 			pthread_mutex_unlock(&m->store_mutex);
 		}
-		if (strcmp(b.buf, oldbuf)) {
+		if (strcmp(b->buf, oldbuf)) {
 			fflush(stdout);
-			puts(b.buf);
+			puts(b->buf);
 			fflush(stdout);
 			free(oldbuf);
-			oldbuf = strdup(b.buf);
+			oldbuf = strdup(b->buf);
 		}
-		b.len = 0;
+		b->len = 0;
+	}
+	free(oldbuf);
+	buf_free(b);
+	for (size_t i = 0; i < mod_count; ++i) {
+		mod *m = &mods[i];
+		pthread_mutex_lock(&m->exit_mutex);
+		m->exit = 1;
+		pthread_cond_signal(&m->exit_cond);
+		pthread_mutex_unlock(&m->exit_mutex);
+		if (!m->interval) {
+			fprintf(stderr, "Killing\n");
+			pthread_kill(m->thread, SIGUSR1);
+			fprintf(stderr, "Killed\n");
+		}
+		pthread_join(m->thread, NULL);
+		mod_deinit(m);
 	}
 }
