@@ -1,7 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <time.h>
+#include "mod.h"
+struct timespec;
 
 char *load_average();
 char *datetime();
