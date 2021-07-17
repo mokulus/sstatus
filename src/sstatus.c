@@ -50,10 +50,8 @@ int main()
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_init(&mods[i], &update_sem);
 	}
-	struct timespec ts;
 	while (!g_quit) {
-		timespec_relative(&ts, 20);
-		if (sem_timedwait(&update_sem, &ts))
+		if (sem_wait(&update_sem))
 			continue;
 
 		for (size_t i = 0; i < mod_count; ++i) {
