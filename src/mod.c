@@ -34,7 +34,7 @@ void mod_destroy(mod *m)
 	sem_destroy(&m->exit_sem);
 }
 
-void mod_new_store(mod *m, char *str)
+void mod_store(mod *m, char *str)
 {
 	pthread_mutex_lock(&m->store_mutex);
 	free(m->store);
@@ -60,7 +60,7 @@ static void *mod_basic_routine(void *vm)
 	mod_block_signals();
 	struct timespec ts;
 	while (!mod_should_exit(m)) {
-		mod_new_store(m, m->fp.basic());
+		mod_store(m, m->fp.basic());
 		timespec_relative(&ts, m->interval);
 		/* have to lock it for mod_should_exit */
 		if (!sem_timedwait(&m->exit_sem, &ts))

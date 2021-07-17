@@ -96,7 +96,7 @@ void mpc_status_routine(mod *m)
 		str[read - 1] = '\0';
 		fclose(f);
 
-		mod_new_store(m, str);
+		mod_store(m, str);
 
 		id = fork();
 		if (id == -1)
