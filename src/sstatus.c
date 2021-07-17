@@ -51,10 +51,7 @@ int main()
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_init(&mods[i], &update_sem);
 	}
-	char *oldbuf = NULL;
 	buf *b = NULL;
-	if (!(oldbuf = strdup("")))
-		goto fail;
 	if (!(b = buf_new()))
 		goto fail;
 	struct timespec ts;
@@ -72,18 +69,11 @@ int main()
 			}
 			pthread_mutex_unlock(&m->store_mutex);
 		}
-		if (strcmp(b->buf, oldbuf)) {
-			fflush(stdout);
-			puts(b->buf);
-			fflush(stdout);
-			free(oldbuf);
-			if (!(oldbuf = strdup(b->buf)))
-				goto fail;
-		}
+		puts(b->buf);
+		fflush(stdout);
 		b->len = 0;
 	}
 fail:
-	free(oldbuf);
 	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_destroy(&mods[i]);
