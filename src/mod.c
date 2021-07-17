@@ -28,7 +28,7 @@ void mod_deinit(mod *m)
 	sem_destroy(&m->exit_sem);
 }
 
-void mod_safe_new_store(mod *m, char *str)
+void mod_new_store(mod *m, char *str)
 {
 	pthread_mutex_lock(&m->store_mutex);
 	free(m->store);
@@ -38,12 +38,12 @@ void mod_safe_new_store(mod *m, char *str)
 	sem_post(m->update_sem);
 }
 
-unsigned mod_safe_should_exit(mod *m)
+unsigned mod_should_exit(mod *m)
 {
 	return sem_trywait(&m->exit_sem) == 0;
 }
 
-void mod_safe_set_exit(mod *m)
+void mod_set_exit(mod *m)
 {
 	sem_post(&m->exit_sem);
 }
@@ -53,10 +53,10 @@ static void *mod_basic_routine(void *vm)
 	mod *m = (mod *)vm;
 	pthread_block_signals();
 	struct timespec ts;
-	while (!mod_safe_should_exit(m)) {
-		mod_safe_new_store(m, m->fp.basic());
+	while (!mod_should_exit(m)) {
+		mod_new_store(m, m->fp.basic());
 		timespec_relative(&ts, m->interval);
-		/* have to lock it for mod_safe_should_exit */
+		/* have to lock it for mod_should_exit */
 		if (!sem_timedwait(&m->exit_sem, &ts))
 			sem_post(&m->exit_sem);
 	}

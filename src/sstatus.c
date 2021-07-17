@@ -24,7 +24,7 @@ static void set_quit_handler(int signal)
 
 void mpc_status_routine(mod *m)
 {
-	while (!mod_safe_should_exit(m)) {
+	while (!mod_should_exit(m)) {
 		int p[2];
 		if (pipe(p) == -1)
 			return;
@@ -53,7 +53,7 @@ void mpc_status_routine(mod *m)
 		str[read - 1] = '\0';
 		fclose(f);
 
-		mod_safe_new_store(m, str);
+		mod_new_store(m, str);
 
 		id = fork();
 		if (id == -1)
@@ -68,13 +68,13 @@ void mpc_status_routine(mod *m)
 		   if we did we'd only learn after mpc idle,
 		   which would delay exit
 		*/
-		if (mod_safe_should_exit(m))
+		if (mod_should_exit(m))
 			continue;
 		int rc = 0;
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fprintf(stderr, "mpc idle failed\n");
-			mod_safe_set_exit(m);
+			mod_set_exit(m);
 			continue;
 		}
 	}
@@ -149,7 +149,7 @@ fail:
 	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod *m = &mods[i];
-		mod_safe_set_exit(m);
+		mod_set_exit(m);
 		if (!m->interval) {
 			pthread_kill(m->thread, SIGUSR1);
 		}
