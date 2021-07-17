@@ -53,7 +53,6 @@ void mpc_status_routine(mod *m)
 		fclose(f);
 
 		mod_safe_new_store(m, str);
-		mod_safe_update_signal(m);
 
 		id = fork();
 		if (id == -1)

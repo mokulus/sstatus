@@ -38,10 +38,7 @@ void mod_safe_new_store(mod *m, char *str)
 	free(m->store);
 	m->store = str;
 	pthread_mutex_unlock(&m->store_mutex);
-}
 
-void mod_safe_update_signal(mod *m)
-{
 	pthread_mutex_lock(m->update_mutex);
 	*m->update = 1;
 	pthread_cond_signal(m->update_cond);
@@ -72,7 +69,6 @@ static void *mod_basic_routine(void *vm)
 	struct timespec ts;
 	while (!mod_safe_should_exit(m)) {
 		mod_safe_new_store(m, m->fp.basic());
-		mod_safe_update_signal(m);
 
 		timespec_relative(&ts, m->interval);
 		pthread_mutex_lock(&m->exit_mutex);

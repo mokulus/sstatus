@@ -26,7 +26,6 @@ void mod_init(mod *m, int *update, pthread_cond_t *update_cond,
 	      pthread_mutex_t *update_mutex);
 void mod_deinit(mod *m);
 void mod_safe_new_store(mod *m, char *str);
-void mod_safe_update_signal(mod *m);
 unsigned mod_safe_should_exit(mod *m);
 void mod_safe_set_exit(mod *m);
 
