@@ -60,7 +60,8 @@ fail:
 	return str;
 }
 
-void timespec_relative(struct timespec *ts, long ms) {
+void timespec_relative(struct timespec *ts, long ms)
+{
 	if (clock_gettime(CLOCK_REALTIME, ts))
 		perror("clock_gettime");
 	long ms2ns = 1000 * 1000;

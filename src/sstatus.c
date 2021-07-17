@@ -36,6 +36,7 @@ void mpc_status_routine(mod *m)
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_handler = empty_handler;
+
 	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
 		perror("couldn't register SIGUSR1 signal handler");
 		return;
@@ -108,8 +109,8 @@ void mpc_status_routine(mod *m)
 
 static mod mods[] = {
     {.fp = {.adv = mpc_status_routine}, .interval = 0},
-    {.fp = {.basic = load_average}, .interval = 1000},
-    {.fp = {.basic = battery_level}, .interval = 1000},
+    {.fp = {.basic = load_average}, .interval = 60 * 1000},
+    {.fp = {.basic = battery_level}, .interval = 60 * 1000},
     {.fp = {.basic = datetime}, .interval = 60 * 1000},
 };
 
@@ -162,7 +163,8 @@ int main()
 		timespec_relative(&ts, 20);
 		int rc = 0;
 		while (!update && !g_quit && rc == 0)
-			rc = pthread_cond_timedwait(&update_cond, &update_mutex, &ts);
+			rc = pthread_cond_timedwait(&update_cond, &update_mutex,
+						    &ts);
 		update = 0;
 		pthread_mutex_unlock(&update_mutex);
 		if (g_quit)
