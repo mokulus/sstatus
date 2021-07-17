@@ -168,10 +168,6 @@ fail:
 		if (!m->interval) {
 			pthread_kill(m->thread, SIGUSR1);
 		}
-	}
-
-	for (size_t i = 0; i < mod_count; ++i) {
-		mod *m = &mods[i];
 		pthread_join(m->thread, NULL);
 		mod_deinit(m);
 	}
