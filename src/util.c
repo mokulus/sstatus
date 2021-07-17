@@ -1,12 +1,12 @@
 #include "util.h"
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/wait.h>
 
 char *load_average()
 {
