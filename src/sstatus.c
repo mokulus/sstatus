@@ -21,24 +21,9 @@ static void set_quit_handler(int signal)
 	g_quit = 1;
 }
 
-static void empty_handler(int signal) { (void)signal; }
-
 void mpc_status_routine(mod *m)
 {
-	pthread_block_signals();
-
-	unsigned should_exit = 0;
-
-	struct sigaction sa;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_handler = empty_handler;
-	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
-		perror("couldn't register SIGUSR1 signal handler");
-		return;
-	}
-
-	while (!should_exit) {
+	while (!mod_safe_should_exit(m)) {
 		int p[2];
 		if (pipe(p) == -1)
 			return;
@@ -79,19 +64,20 @@ void mpc_status_routine(mod *m)
 			execlp("mpc", "mpc", "idle", (char *)NULL);
 			exit(1);
 		}
+		/* check in case we got signal just before wait
+		   if we did we'd only learn after mpc idle,
+		   which would delay exit
+		*/
+		if (mod_safe_should_exit(m))
+			continue;
 		int rc = 0;
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fprintf(stderr, "mpc idle failed\n");
-			should_exit = 1;
+			mod_safe_set_exit(m);
 			continue;
 		}
-		pthread_mutex_lock(&m->exit_mutex);
-		should_exit = m->exit;
-		pthread_mutex_unlock(&m->exit_mutex);
 	}
-
-	mod_safe_new_store(m, NULL);
 }
 
 static mod mods[] = {

@@ -48,13 +48,28 @@ void mod_safe_update_signal(mod *m)
 	pthread_mutex_unlock(m->update_mutex);
 }
 
+unsigned mod_safe_should_exit(mod *m)
+{
+	unsigned exit = 0;
+	pthread_mutex_lock(&m->exit_mutex);
+	exit = m->exit;
+	pthread_mutex_unlock(&m->exit_mutex);
+	return exit;
+}
+
+void mod_safe_set_exit(mod *m)
+{
+	pthread_mutex_lock(&m->exit_mutex);
+	m->exit = 1;
+	pthread_mutex_unlock(&m->exit_mutex);
+}
+
 static void *mod_basic_routine(void *vm)
 {
 	mod *m = (mod *)vm;
 	pthread_block_signals();
-	unsigned exit = 0;
 	struct timespec ts;
-	while (!exit) {
+	while (!mod_safe_should_exit(m)) {
 		mod_safe_new_store(m, m->fp.basic());
 		mod_safe_update_signal(m);
 
@@ -64,16 +79,29 @@ static void *mod_basic_routine(void *vm)
 		while (!m->exit && rc == 0)
 			rc = pthread_cond_timedwait(&m->exit_cond,
 						    &m->exit_mutex, &ts);
-		exit = m->exit;
 		pthread_mutex_unlock(&m->exit_mutex);
 	}
 	mod_safe_new_store(m, NULL);
 	return NULL;
 }
 
+static void empty_handler(int signal) { (void)signal; }
+
 static void *mod_advanced_routine(void *vm)
 {
+	pthread_block_signals();
+
+	struct sigaction sa;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = empty_handler;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+		perror("couldn't register SIGUSR1 signal handler");
+		return NULL;
+	}
+
 	mod *m = (mod *)vm;
 	m->fp.adv(m);
+	mod_safe_new_store(m, NULL);
 	return NULL;
 }
