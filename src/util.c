@@ -56,7 +56,8 @@ char *battery_level()
 	/* the newline is included, replace it with % */
 	*strchr(str, '\n') = '%';
 fail:
-	fclose(f);
+	if (f)
+		fclose(f);
 	return str;
 }
 
