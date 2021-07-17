@@ -116,7 +116,7 @@ void mpc_status_routine(mod *m)
 		int rc = 0;
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
-			fprintf(stderr, "mpc idle failed\n");
+			fputs("mpc idle failed\n", stderr);
 			mod_set_exit(m);
 			continue;
 		}
