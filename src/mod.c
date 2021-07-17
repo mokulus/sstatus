@@ -38,9 +38,15 @@ void mod_safe_new_store(mod *m, char *str)
 	sem_post(m->update_sem);
 }
 
-unsigned mod_safe_should_exit(mod *m) { return sem_trywait(&m->exit_sem) == 0; }
+unsigned mod_safe_should_exit(mod *m)
+{
+	return sem_trywait(&m->exit_sem) == 0;
+}
 
-void mod_safe_set_exit(mod *m) { sem_post(&m->exit_sem); }
+void mod_safe_set_exit(mod *m)
+{
+	sem_post(&m->exit_sem);
+}
 
 static void *mod_basic_routine(void *vm)
 {
@@ -57,7 +63,10 @@ static void *mod_basic_routine(void *vm)
 	return NULL;
 }
 
-static void empty_handler(int signal) { (void)signal; }
+static void empty_handler(int signal)
+{
+	(void)signal;
+}
 
 static void *mod_advanced_routine(void *vm)
 {
