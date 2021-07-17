@@ -131,11 +131,11 @@ int main()
 		while (!update && !g_quit && rc == 0)
 			rc = pthread_cond_timedwait(&update_cond, &update_mutex,
 						    &ts);
+		int should_update = update;
 		update = 0;
 		pthread_mutex_unlock(&update_mutex);
-		if (g_quit)
-			continue;
-		if (rc != 0)
+		/* if not g_quit or just timeout (rc != 0) */
+		if (!should_update)
 			continue;
 
 		for (size_t i = 0; i < mod_count; ++i) {
