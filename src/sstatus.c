@@ -151,12 +151,19 @@ int main()
 		free(b);
 		return 1;
 	}
+	struct timespec ts;
 	while (!g_quit) {
 		pthread_mutex_lock(&update_mutex);
-		while (!update)
-			pthread_cond_wait(&update_cond, &update_mutex);
+		timespec_relative(&ts, 20);
+		int rc = 0;
+		while (!update && !g_quit && rc == 0)
+			rc = pthread_cond_timedwait(&update_cond, &update_mutex, &ts);
 		update = 0;
 		pthread_mutex_unlock(&update_mutex);
+		if (g_quit)
+			continue;
+		if (rc != 0)
+			continue;
 
 		for (size_t i = 0; i < mod_count; ++i) {
 			mod *m = &mods[i];
@@ -185,10 +192,12 @@ int main()
 		pthread_cond_signal(&m->exit_cond);
 		pthread_mutex_unlock(&m->exit_mutex);
 		if (!m->interval) {
-			fprintf(stderr, "Killing\n");
 			pthread_kill(m->thread, SIGUSR1);
-			fprintf(stderr, "Killed\n");
 		}
+	}
+
+	for (size_t i = 0; i < mod_count; ++i) {
+		mod *m = &mods[i];
 		pthread_join(m->thread, NULL);
 		mod_deinit(m);
 	}

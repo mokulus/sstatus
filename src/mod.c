@@ -54,9 +54,7 @@ static void *mod_basic_routine(void *vm)
 		pthread_cond_signal(m->update_cond);
 		pthread_mutex_unlock(m->update_mutex);
 
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec += m->interval / 1000;
-		ts.tv_nsec += (m->interval % 1000) * 1000 * 1000;
+		timespec_relative(&ts, m->interval);
 		pthread_mutex_lock(&m->exit_mutex);
 		int rc = 0;
 		while (!m->exit && rc == 0)

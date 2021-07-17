@@ -59,3 +59,13 @@ fail:
 	fclose(f);
 	return str;
 }
+
+void timespec_relative(struct timespec *ts, long ms) {
+	if (clock_gettime(CLOCK_REALTIME, ts))
+		perror("clock_gettime");
+	long ms2ns = 1000 * 1000;
+	long ms2s = ms2ns * 1000;
+	ts->tv_nsec += ms * ms2ns;
+	ts->tv_sec += ts->tv_nsec / ms2s;
+	ts->tv_nsec = ts->tv_nsec % ms2s;
+}
