@@ -1,5 +1,6 @@
 #include "mod.h"
 #include "util.h"
+#include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,17 +9,12 @@
 static void *mod_basic_routine(void *vm);
 static void *mod_advanced_routine(void *vm);
 
-void mod_init(mod *m, int *update, pthread_cond_t *update_cond,
-	      pthread_mutex_t *update_mutex)
+void mod_init(mod *m, sem_t *update_sem)
 {
 	m->store = NULL;
+	m->update_sem = update_sem;
 	pthread_mutex_init(&m->store_mutex, NULL);
-	m->exit = 0;
-	pthread_mutex_init(&m->exit_mutex, NULL);
-	pthread_cond_init(&m->exit_cond, NULL);
-	m->update = update;
-	m->update_cond = update_cond;
-	m->update_mutex = update_mutex;
+	sem_init(&m->exit_sem, 0, 0);
 	if (m->interval)
 		pthread_create(&m->thread, NULL, mod_basic_routine, m);
 	else
@@ -29,8 +25,7 @@ void mod_deinit(mod *m)
 {
 	free(m->store);
 	pthread_mutex_destroy(&m->store_mutex);
-	pthread_mutex_destroy(&m->exit_mutex);
-	pthread_cond_destroy(&m->exit_cond);
+	sem_destroy(&m->exit_sem);
 }
 
 void mod_safe_new_store(mod *m, char *str)
@@ -40,28 +35,12 @@ void mod_safe_new_store(mod *m, char *str)
 	m->store = str;
 	pthread_mutex_unlock(&m->store_mutex);
 
-	pthread_mutex_lock(m->update_mutex);
-	*m->update = 1;
-	pthread_cond_signal(m->update_cond);
-	pthread_mutex_unlock(m->update_mutex);
+	sem_post(m->update_sem);
 }
 
-unsigned mod_safe_should_exit(mod *m)
-{
-	unsigned exit = 0;
-	pthread_mutex_lock(&m->exit_mutex);
-	exit = m->exit;
-	pthread_mutex_unlock(&m->exit_mutex);
-	return exit;
-}
+unsigned mod_safe_should_exit(mod *m) { return sem_trywait(&m->exit_sem) == 0; }
 
-void mod_safe_set_exit(mod *m)
-{
-	pthread_mutex_lock(&m->exit_mutex);
-	m->exit = 1;
-	pthread_cond_signal(&m->exit_cond);
-	pthread_mutex_unlock(&m->exit_mutex);
-}
+void mod_safe_set_exit(mod *m) { sem_post(&m->exit_sem); }
 
 static void *mod_basic_routine(void *vm)
 {
@@ -70,14 +49,10 @@ static void *mod_basic_routine(void *vm)
 	struct timespec ts;
 	while (!mod_safe_should_exit(m)) {
 		mod_safe_new_store(m, m->fp.basic());
-
 		timespec_relative(&ts, m->interval);
-		pthread_mutex_lock(&m->exit_mutex);
-		int rc = 0;
-		while (!m->exit && rc == 0)
-			rc = pthread_cond_timedwait(&m->exit_cond,
-						    &m->exit_mutex, &ts);
-		pthread_mutex_unlock(&m->exit_mutex);
+		/* have to lock it for mod_safe_should_exit */
+		if (!sem_timedwait(&m->exit_sem, &ts))
+			sem_post(&m->exit_sem);
 	}
 	return NULL;
 }

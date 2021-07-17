@@ -2,6 +2,7 @@
 #define MOD_H
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <time.h>
 
 typedef struct mod mod;
@@ -13,17 +14,12 @@ struct mod {
 	time_t interval;
 	char *store;
 	pthread_mutex_t store_mutex;
-	int *update;
-	pthread_cond_t *update_cond;
-	pthread_mutex_t *update_mutex;
-	unsigned exit;
-	pthread_mutex_t exit_mutex;
-	pthread_cond_t exit_cond;
+	sem_t *update_sem;
+	sem_t exit_sem;
 	pthread_t thread;
 };
 
-void mod_init(mod *m, int *update, pthread_cond_t *update_cond,
-	      pthread_mutex_t *update_mutex);
+void mod_init(mod *m, sem_t *update_sem);
 void mod_deinit(mod *m);
 void mod_safe_new_store(mod *m, char *str);
 unsigned mod_safe_should_exit(mod *m);

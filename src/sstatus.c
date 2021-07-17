@@ -1,6 +1,7 @@
 #include <bsd/string.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,13 +109,10 @@ int main()
 	if (!register_signals())
 		return 1;
 	const size_t mod_count = sizeof(mods) / sizeof(mod);
-	pthread_cond_t update_cond;
-	pthread_cond_init(&update_cond, NULL);
-	pthread_mutex_t update_mutex;
-	pthread_mutex_init(&update_mutex, NULL);
-	int update = 0;
+	sem_t update_sem;
+	sem_init(&update_sem, 0, 0);
 	for (size_t i = 0; i < mod_count; ++i) {
-		mod_init(&mods[i], &update, &update_cond, &update_mutex);
+		mod_init(&mods[i], &update_sem);
 	}
 	char *oldbuf = NULL;
 	buf *b = NULL;
@@ -124,17 +122,8 @@ int main()
 		goto fail;
 	struct timespec ts;
 	while (!g_quit) {
-		pthread_mutex_lock(&update_mutex);
 		timespec_relative(&ts, 20);
-		int rc = 0;
-		while (!update && !g_quit && rc == 0)
-			rc = pthread_cond_timedwait(&update_cond, &update_mutex,
-						    &ts);
-		int should_update = update;
-		update = 0;
-		pthread_mutex_unlock(&update_mutex);
-		/* if not g_quit or just timeout (rc != 0) */
-		if (!should_update)
+		if (sem_timedwait(&update_sem, &ts))
 			continue;
 
 		for (size_t i = 0; i < mod_count; ++i) {
