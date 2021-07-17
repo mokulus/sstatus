@@ -27,6 +27,7 @@ void mod_init(mod *m, int *update, pthread_cond_t *update_cond,
 
 void mod_deinit(mod *m)
 {
+	free(m->store);
 	pthread_mutex_destroy(&m->store_mutex);
 	pthread_mutex_destroy(&m->exit_mutex);
 	pthread_cond_destroy(&m->exit_cond);
@@ -78,7 +79,6 @@ static void *mod_basic_routine(void *vm)
 						    &m->exit_mutex, &ts);
 		pthread_mutex_unlock(&m->exit_mutex);
 	}
-	mod_safe_new_store(m, NULL);
 	return NULL;
 }
 
@@ -99,6 +99,5 @@ static void *mod_advanced_routine(void *vm)
 
 	mod *m = (mod *)vm;
 	m->fp.adv(m);
-	mod_safe_new_store(m, NULL);
 	return NULL;
 }
