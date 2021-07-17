@@ -77,7 +77,8 @@ int main()
 			puts(b->buf);
 			fflush(stdout);
 			free(oldbuf);
-			oldbuf = strdup(b->buf);
+			if (!(oldbuf = strdup(b->buf)))
+				goto fail;
 		}
 		b->len = 0;
 	}
