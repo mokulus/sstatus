@@ -21,8 +21,13 @@ void mod_init(mod *m, sem_t *update_sem)
 		pthread_create(&m->thread, NULL, mod_advanced_routine, m);
 }
 
-void mod_deinit(mod *m)
+void mod_destroy(mod *m)
 {
+	mod_set_exit(m);
+	if (!m->interval) {
+		pthread_kill(m->thread, SIGUSR1);
+	}
+	pthread_join(m->thread, NULL);
 	free(m->store);
 	pthread_mutex_destroy(&m->store_mutex);
 	sem_destroy(&m->exit_sem);

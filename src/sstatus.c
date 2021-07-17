@@ -148,12 +148,6 @@ fail:
 	free(oldbuf);
 	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
-		mod *m = &mods[i];
-		mod_set_exit(m);
-		if (!m->interval) {
-			pthread_kill(m->thread, SIGUSR1);
-		}
-		pthread_join(m->thread, NULL);
-		mod_deinit(m);
+		mod_destroy(&mods[i]);
 	}
 }

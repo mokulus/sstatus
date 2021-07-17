@@ -20,7 +20,7 @@ struct mod {
 };
 
 void mod_init(mod *m, sem_t *update_sem);
-void mod_deinit(mod *m);
+void mod_destroy(mod *m);
 void mod_new_store(mod *m, char *str);
 unsigned mod_should_exit(mod *m);
 void mod_set_exit(mod *m);
