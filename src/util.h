@@ -9,6 +9,5 @@ char *datetime();
 char *battery_level();
 void mpc_status_routine(mod *m);
 void timespec_relative(struct timespec *ts, long ms);
-void pthread_block_signals(void);
 
 #endif

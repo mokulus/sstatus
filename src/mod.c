@@ -8,6 +8,7 @@
 
 static void *mod_basic_routine(void *vm);
 static void *mod_advanced_routine(void *vm);
+static void mod_block_signals(void);
 
 void mod_init(mod *m, sem_t *update_sem)
 {
@@ -56,7 +57,7 @@ void mod_set_exit(mod *m)
 static void *mod_basic_routine(void *vm)
 {
 	mod *m = (mod *)vm;
-	pthread_block_signals();
+	mod_block_signals();
 	struct timespec ts;
 	while (!mod_should_exit(m)) {
 		mod_new_store(m, m->fp.basic());
@@ -75,7 +76,7 @@ static void empty_handler(int signal)
 
 static void *mod_advanced_routine(void *vm)
 {
-	pthread_block_signals();
+	mod_block_signals();
 
 	struct sigaction sa;
 	sa.sa_flags = 0;
@@ -89,4 +90,13 @@ static void *mod_advanced_routine(void *vm)
 	mod *m = (mod *)vm;
 	m->fp.adv(m);
 	return NULL;
+}
+
+static void mod_block_signals(void)
+{
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
 }

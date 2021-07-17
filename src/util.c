@@ -1,6 +1,5 @@
 #include "util.h"
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,13 +132,4 @@ void timespec_relative(struct timespec *ts, long ms)
 	ts->tv_nsec += ms * ms2ns;
 	ts->tv_sec += ts->tv_nsec / ms2s;
 	ts->tv_nsec = ts->tv_nsec % ms2s;
-}
-
-void pthread_block_signals(void)
-{
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	sigaddset(&set, SIGTERM);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
 }
