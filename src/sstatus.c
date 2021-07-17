@@ -144,10 +144,15 @@ int main()
 		mod_init(&mods[i], &update, &update_cond, &update_mutex);
 	}
 	char *oldbuf = strdup("");
-	buf *b = malloc(sizeof(*b));
-	if (!b)
+	if (!oldbuf)
 		return 1;
+	buf *b = malloc(sizeof(*b));
+	if (!b) {
+		free(oldbuf);
+		return 1;
+	}
 	if (!buf_init(b)) {
+		free(oldbuf);
 		free(b);
 		return 1;
 	}
