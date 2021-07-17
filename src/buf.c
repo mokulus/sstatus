@@ -2,17 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-int buf_init(buf *b)
+buf *buf_new(void)
 {
+	buf *b = malloc(sizeof(*b));
+	if (!b)
+		return b;
 	b->cap = 32;
 	b->len = 0;
 	b->buf = malloc(b->cap);
 	if (!b->buf) {
-		b->cap = 0;
-		return 0;
+		free(b);
+		return NULL;
 	}
 	b->buf[0] = '\0';
-	return 1;
+	return b;
 }
 
 int buf_append(buf *b, const char *str)
@@ -36,6 +39,8 @@ int buf_append(buf *b, const char *str)
 
 void buf_free(buf *b)
 {
+	if (!b)
+		return;
 	free(b->buf);
 	free(b);
 }

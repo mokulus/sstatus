@@ -36,11 +36,11 @@ void mpc_status_routine(mod *m)
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_handler = empty_handler;
-
 	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
 		perror("couldn't register SIGUSR1 signal handler");
 		return;
 	}
+
 	while (!should_exit) {
 		int p[2];
 		if (pipe(p) == -1)
@@ -144,19 +144,12 @@ int main()
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_init(&mods[i], &update, &update_cond, &update_mutex);
 	}
-	char *oldbuf = strdup("");
-	if (!oldbuf)
-		return 1;
-	buf *b = malloc(sizeof(*b));
-	if (!b) {
-		free(oldbuf);
-		return 1;
-	}
-	if (!buf_init(b)) {
-		free(oldbuf);
-		free(b);
-		return 1;
-	}
+	char *oldbuf = NULL;
+	buf *b = NULL;
+	if (!(oldbuf = strdup("")))
+		goto fail;
+	if (!(b = buf_new()))
+		goto fail;
 	struct timespec ts;
 	while (!g_quit) {
 		pthread_mutex_lock(&update_mutex);
@@ -190,6 +183,7 @@ int main()
 		}
 		b->len = 0;
 	}
+fail:
 	free(oldbuf);
 	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
