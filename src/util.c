@@ -10,10 +10,10 @@
 
 char *load_average()
 {
-	char *str = NULL;
 	FILE *f = fopen("/proc/loadavg", "r");
 	if (!f)
-		goto fail;
+		return NULL;
+	char *str = NULL;
 	size_t n = 0;
 	if (getline(&str, &n, f) == -1)
 		goto fail;
@@ -33,6 +33,8 @@ char *datetime()
 
 	size_t n = 64;
 	char *str = malloc(n);
+	if (!str)
+		return NULL;
 	time_t now = time(NULL);
 	struct tm tmp;
 	localtime_r(&now, &tmp);
@@ -50,18 +52,17 @@ char *datetime()
 
 char *battery_level()
 {
-	char *str = NULL;
 	FILE *f = fopen("/sys/class/power_supply/BAT0/capacity", "r");
 	if (!f)
-		goto fail;
+		return NULL;
+	char *str = NULL;
 	size_t n = 0;
 	if (getline(&str, &n, f) == -1)
 		goto fail;
 	/* the newline is included, replace it with % */
 	*strchr(str, '\n') = '%';
 fail:
-	if (f)
-		fclose(f);
+	fclose(f);
 	return str;
 }
 
