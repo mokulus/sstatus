@@ -161,10 +161,7 @@ fail:
 	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod *m = &mods[i];
-		pthread_mutex_lock(&m->exit_mutex);
-		m->exit = 1;
-		pthread_cond_signal(&m->exit_cond);
-		pthread_mutex_unlock(&m->exit_mutex);
+		mod_safe_set_exit(m);
 		if (!m->interval) {
 			pthread_kill(m->thread, SIGUSR1);
 		}

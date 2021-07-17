@@ -61,6 +61,7 @@ void mod_safe_set_exit(mod *m)
 {
 	pthread_mutex_lock(&m->exit_mutex);
 	m->exit = 1;
+	pthread_cond_signal(&m->exit_cond);
 	pthread_mutex_unlock(&m->exit_mutex);
 }
 
