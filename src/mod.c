@@ -32,27 +32,31 @@ void mod_deinit(mod *m)
 	pthread_cond_destroy(&m->exit_cond);
 }
 
+void mod_safe_new_store(mod *m, char *str)
+{
+	pthread_mutex_lock(&m->store_mutex);
+	free(m->store);
+	m->store = str;
+	pthread_mutex_unlock(&m->store_mutex);
+}
+
+void mod_safe_update_signal(mod *m)
+{
+	pthread_mutex_lock(m->update_mutex);
+	*m->update = 1;
+	pthread_cond_signal(m->update_cond);
+	pthread_mutex_unlock(m->update_mutex);
+}
+
 static void *mod_basic_routine(void *vm)
 {
 	mod *m = (mod *)vm;
+	pthread_block_signals();
 	unsigned exit = 0;
 	struct timespec ts;
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	sigaddset(&set, SIGTERM);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
 	while (!exit) {
-		char *str = m->fp.basic();
-		pthread_mutex_lock(&m->store_mutex);
-		free(m->store);
-		m->store = str;
-		pthread_mutex_unlock(&m->store_mutex);
-
-		pthread_mutex_lock(m->update_mutex);
-		*m->update = 1;
-		pthread_cond_signal(m->update_cond);
-		pthread_mutex_unlock(m->update_mutex);
+		mod_safe_new_store(m, m->fp.basic());
+		mod_safe_update_signal(m);
 
 		timespec_relative(&ts, m->interval);
 		pthread_mutex_lock(&m->exit_mutex);
@@ -63,10 +67,7 @@ static void *mod_basic_routine(void *vm)
 		exit = m->exit;
 		pthread_mutex_unlock(&m->exit_mutex);
 	}
-	pthread_mutex_lock(&m->store_mutex);
-	free(m->store);
-	m->store = NULL;
-	pthread_mutex_unlock(&m->store_mutex);
+	mod_safe_new_store(m, NULL);
 	return NULL;
 }
 

@@ -25,12 +25,9 @@ static void empty_handler(int signal) { (void)signal; }
 
 void mpc_status_routine(mod *m)
 {
+	pthread_block_signals();
+
 	unsigned should_exit = 0;
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	sigaddset(&set, SIGTERM);
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
 	struct sigaction sa;
 	sa.sa_flags = 0;
@@ -70,15 +67,8 @@ void mpc_status_routine(mod *m)
 		str[read - 1] = '\0';
 		fclose(f);
 
-		pthread_mutex_lock(&m->store_mutex);
-		free(m->store);
-		m->store = str;
-		pthread_mutex_unlock(&m->store_mutex);
-
-		pthread_mutex_lock(m->update_mutex);
-		*m->update = 1;
-		pthread_cond_signal(m->update_cond);
-		pthread_mutex_unlock(m->update_mutex);
+		mod_safe_new_store(m, str);
+		mod_safe_update_signal(m);
 
 		id = fork();
 		if (id == -1)
@@ -101,10 +91,7 @@ void mpc_status_routine(mod *m)
 		pthread_mutex_unlock(&m->exit_mutex);
 	}
 
-	pthread_mutex_lock(&m->store_mutex);
-	free(m->store);
-	m->store = NULL;
-	pthread_mutex_unlock(&m->store_mutex);
+	mod_safe_new_store(m, NULL);
 }
 
 static mod mods[] = {
