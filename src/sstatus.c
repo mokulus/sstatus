@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "buf.h"
 #include "mod.h"
 #include "util.h"
 
@@ -51,9 +50,6 @@ int main()
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_init(&mods[i], &update_sem);
 	}
-	buf *b = NULL;
-	if (!(b = buf_new()))
-		goto fail;
 	struct timespec ts;
 	while (!g_quit) {
 		timespec_relative(&ts, 20);
@@ -64,17 +60,14 @@ int main()
 			mod *m = &mods[i];
 			pthread_mutex_lock(&m->store_mutex);
 			if (m->store && strcmp(m->store, "")) {
-				buf_append(b, " | ");
-				buf_append(b, m->store);
+				fputs(" | ", stdout);
+				fputs(m->store, stdout);
 			}
 			pthread_mutex_unlock(&m->store_mutex);
 		}
-		puts(b->buf);
+		putchar('\n');
 		fflush(stdout);
-		b->len = 0;
 	}
-fail:
-	buf_free(b);
 	for (size_t i = 0; i < mod_count; ++i) {
 		mod_destroy(&mods[i]);
 	}
