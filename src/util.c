@@ -77,7 +77,9 @@ void mpc_status_routine(mod *m)
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
-			execlp("sh", "sh", "-c",
+			execlp("sh",
+			       "sh",
+			       "-c",
 			       "mpc status | "
 			       "sed 1q | "
 			       "grep -v 'volume: n/a' | "
