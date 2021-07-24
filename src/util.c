@@ -67,6 +67,7 @@ fail:
 
 void mpc_status_routine(mod *m)
 {
+	int rc;
 	while (!mod_should_exit(m)) {
 		int p[2];
 		if (pipe(p) == -1)
@@ -97,6 +98,12 @@ void mpc_status_routine(mod *m)
 		ssize_t read = getline(&str, &n, f);
 		str[read - 1] = '\0';
 		fclose(f);
+		waitpid(id, &rc, 0);
+		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
+			fputs("mpc status failed\n", stderr);
+			mod_set_exit(m);
+			continue;
+		}
 
 		mod_store(m, str);
 
@@ -115,7 +122,6 @@ void mpc_status_routine(mod *m)
 		*/
 		if (mod_should_exit(m))
 			continue;
-		int rc = 0;
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fputs("mpc idle failed\n", stderr);
