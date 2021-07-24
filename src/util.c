@@ -96,6 +96,11 @@ void mpc_status_routine(mod *m)
 		size_t n = 0;
 		FILE *f = fdopen(p[0], "r");
 		ssize_t read = getline(&str, &n, f);
+		if (read == -1) {
+			perror("getline");
+			mod_set_exit(m);
+			continue;
+		}
 		str[read - 1] = '\0';
 		fclose(f);
 		waitpid(id, &rc, 0);
