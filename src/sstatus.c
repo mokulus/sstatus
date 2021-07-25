@@ -19,8 +19,8 @@ static void set_quit_handler(int signal)
 
 static mod mods[] = {
     {.fp = {.adv = mpc_status_routine}, .interval = 0},
-    {.fp = {.basic = load_average}, .interval = 60 * 1000},
-    {.fp = {.basic = battery_level}, .interval = 60 * 1000},
+    {.fp = {.basic = load_average}, .interval = 1000},
+    {.fp = {.basic = battery_level}, .interval = 1000},
     {.fp = {.basic = datetime}, .interval = 60 * 1000},
 };
 
