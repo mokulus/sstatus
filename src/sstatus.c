@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "mod.h"
+#include "mpc.h"
 #include "util.h"
 
 static volatile sig_atomic_t g_quit = 0;
