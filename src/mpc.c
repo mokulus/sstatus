@@ -12,11 +12,19 @@ void mpc_status_routine(mod *m)
 	int rc;
 	while (!mod_should_exit(m)) {
 		int p[2];
-		if (pipe(p) == -1)
-			return;
+		if (pipe(p) == -1) {
+			perror("pipe");
+			mod_set_exit(m);
+			continue;
+		}
 		pid_t id = fork();
-		if (id == -1)
-			return;
+		if (id == -1) {
+			perror("fork");
+			mod_set_exit(m);
+			close(p[0]);
+			close(p[1]);
+			continue;
+		}
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
@@ -39,22 +47,19 @@ void mpc_status_routine(mod *m)
 		FILE *f = fdopen(p[0], "r");
 		ssize_t read = getline(&str, &n, f);
 		if (read == -1) {
+			fclose(f);
+			wait(NULL);
 			if (errno) {
 				perror("getline");
-				fclose(f);
-				wait(NULL);
 				mod_set_exit(m);
-				continue;
 			} else {
 				/* read is -1 and no errno */
 				/* so the pipe was empty/broken */
 				/* when playlist is empty */
 				/* grep -v discards everything */
-				fclose(f);
-				wait(NULL);
 				mod_store(m, NULL);
-				continue;
 			}
+			continue;
 		}
 		str[read - 1] = '\0';
 		fclose(f);
@@ -79,9 +84,11 @@ void mpc_status_routine(mod *m)
 		/* check in case we got signal just before wait
 		   if we did we'd only learn after mpc idle,
 		   which would delay exit
+		   we have to kill and reap the child
 		*/
-		if (mod_should_exit(m))
-			continue;
+		if (mod_should_exit(m)) {
+			kill(id, SIGTERM);
+		}
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fputs("mpc idle failed\n", stderr);
