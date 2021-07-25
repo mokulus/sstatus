@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <errno.h>
 
 static void *mod_basic_routine(void *vm);
 static void *mod_advanced_routine(void *vm);
@@ -46,7 +47,10 @@ void mod_store(mod *m, char *str)
 
 unsigned mod_should_exit(mod *m)
 {
-	return sem_trywait(&m->exit_sem) == 0;
+	int old_errno = errno;
+	unsigned ret = sem_trywait(&m->exit_sem) == 0;
+	errno = old_errno;
+	return ret;
 }
 
 void mod_set_exit(mod *m)
