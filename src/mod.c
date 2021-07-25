@@ -1,11 +1,11 @@
 #include "mod.h"
 #include "util.h"
+#include <errno.h>
 #include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <errno.h>
 
 static void *mod_basic_routine(void *vm);
 static void *mod_advanced_routine(void *vm);

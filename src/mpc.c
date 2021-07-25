@@ -1,11 +1,11 @@
 #include "mpc.h"
 #include "mod.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 void mpc_status_routine(mod *m)
 {
@@ -97,4 +97,3 @@ void mpc_status_routine(mod *m)
 		}
 	}
 }
-
