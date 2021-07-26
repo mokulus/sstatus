@@ -47,8 +47,6 @@ void mpc_status_routine(mod *m)
 		FILE *f = fdopen(p[0], "r");
 		ssize_t read = getline(&str, &n, f);
 		if (read == -1) {
-			fclose(f);
-			wait(NULL);
 			if (errno) {
 				perror("getline");
 				mod_set_exit(m);
@@ -59,6 +57,8 @@ void mpc_status_routine(mod *m)
 				/* grep -v discards everything */
 				mod_store(m, NULL);
 			}
+			fclose(f);
+			wait(NULL);
 			continue;
 		}
 		str[read - 1] = '\0';
