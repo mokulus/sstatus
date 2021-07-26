@@ -58,7 +58,7 @@ void mpc_status_routine(mod *m)
 				mod_store(m, NULL);
 			}
 			fclose(f);
-			wait(NULL);
+			waitpid(id, NULL, 0);
 			continue;
 		}
 		str[read - 1] = '\0';
