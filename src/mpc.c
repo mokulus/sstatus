@@ -46,31 +46,21 @@ void mpc_status_routine(mod *m)
 		size_t n = 0;
 		FILE *f = fdopen(p[0], "r");
 		ssize_t read = getline(&str, &n, f);
-		if (read == -1) {
-			if (errno) {
-				perror("getline");
-				mod_set_exit(m);
-			} else {
-				/* read is -1 and no errno */
-				/* so the pipe was empty/broken */
-				/* when playlist is empty */
-				/* grep -v discards everything */
-				mod_store(m, NULL);
-			}
-			fclose(f);
-			waitpid(id, NULL, 0);
-			continue;
-		}
-		str[read - 1] = '\0';
 		fclose(f);
+		if (read == -1 && errno) {
+			perror("getline");
+			mod_set_exit(m);
+		}
+		if (str) {
+			str[read - 1] = '\0';
+		}
+		mod_store(m, str);
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fputs("mpc status failed\n", stderr);
 			mod_set_exit(m);
 			continue;
 		}
-
-		mod_store(m, str);
 
 		id = fork();
 		if (id == -1)
