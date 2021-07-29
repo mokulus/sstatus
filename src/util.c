@@ -6,20 +6,21 @@
 
 char *load_average()
 {
-	FILE *f = fopen("/proc/loadavg", "r");
-	if (!f)
+	double lavg[3];
+	if (getloadavg(lavg, 3) == -1)
 		return NULL;
+	const char *format = "%1.2f %1.2f %1.2f";
 	char *str = NULL;
-	size_t n = 0;
-	if (getline(&str, &n, f) == -1)
-		goto fail;
-	char *cut = str;
-	for (int i = 0; i < 3; ++i)
-		cut = strchr(cut, ' ') + 1;
-	cut--; /* went 1 char after space, move back */
-	*cut = '\0';
-fail:
-	fclose(f);
+	size_t size = 0;
+	int n = snprintf(str, size, format, lavg[0], lavg[1], lavg[2]);
+	size = (size_t)n + 1;
+	if (!(str = malloc(size)))
+		return NULL;
+	n = snprintf(str, size, format, lavg[0], lavg[1], lavg[2]);
+	if (n < 0) {
+		free(str);
+		return NULL;
+	}
 	return str;
 }
 
