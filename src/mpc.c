@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <string.h>
 
 void mpc_status_routine(mod *m)
 {
@@ -28,17 +29,7 @@ void mpc_status_routine(mod *m)
 		if (id == 0) {
 			close(p[0]);
 			dup2(p[1], 1);
-			execlp("sh",
-			       "sh",
-			       "-c",
-			       "mpc status | "
-			       "sed 1q | "
-			       "grep -v 'volume: ' | "
-			       /* "tr -dc '[:print:]' | " */
-			       "awk '{ if ($0 ~ /.{30,}/) { print "
-			       "substr($0, 1, "
-			       "29) \"…\" } else { print $0 } }'",
-			       (char *)NULL);
+			execlp("mpc", "mpc", "status", (char *)NULL);
 			exit(1);
 		}
 		close(p[1]);
@@ -53,6 +44,12 @@ void mpc_status_routine(mod *m)
 		}
 		if (str) {
 			str[read - 1] = '\0';
+			const unsigned max_len = 30;
+			const char *elipsis = "…";
+			const size_t elipsis_len = strlen(elipsis);
+			if ((size_t)read > max_len + elipsis_len + 1) {
+				strcpy(str + max_len, elipsis);
+			}
 		}
 		mod_store(m, str);
 		waitpid(id, &rc, 0);
