@@ -63,6 +63,32 @@ fail:
 	return str;
 }
 
+char *temperature()
+{
+	FILE *f = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
+	if (!f)
+		return NULL;
+	char *str = NULL;
+	size_t n = 0;
+	if (getline(&str, &n, f) == -1)
+		goto fail;
+	long temp = strtoll(str, NULL, 10) / 1000;
+	free(str);
+	str = NULL;
+	n = 0;
+	const char *fmt = "%ld°C";
+	int ret = snprintf(str, n, fmt, temp);
+	if (ret < 0)
+		goto fail;
+	n = (size_t)ret + 1;
+	if (!(str = malloc(n)))
+		goto fail;
+	snprintf(str, n, fmt, temp);
+fail:
+	fclose(f);
+	return str;
+}
+
 void timespec_relative(struct timespec *ts, long ms)
 {
 	if (clock_gettime(CLOCK_REALTIME, ts))
