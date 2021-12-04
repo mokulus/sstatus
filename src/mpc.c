@@ -76,7 +76,13 @@ void mpc_status_routine(mod *m)
 		if (mod_should_exit(m)) {
 			kill(id, SIGTERM);
 		}
-		waitpid(id, &rc, 0);
+		if (waitpid(id, &rc, 0) == -1) {
+			/* interrupted by signal */
+			kill(id, SIGKILL);
+			waitpid(id, &rc, 0);
+			mod_set_exit(m);
+			continue;
+		}
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fputs("mpc idle failed\n", stderr);
 			mod_set_exit(m);
