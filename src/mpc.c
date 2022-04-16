@@ -38,26 +38,25 @@ void mpc_status_routine(mod *m)
 		FILE *f = fdopen(p[0], "r");
 		ssize_t read = getline(&str, &n, f);
 		fclose(f);
-		if (read == -1 && errno) {
-			perror("getline");
-			mod_set_exit(m);
-		}
-		if (str) {
-			str[read - 1] = '\0';
-			const unsigned max_len = 30;
-			const char *elipsis = "…";
-			const size_t elipsis_len = strlen(elipsis);
-			if ((size_t)read > max_len + elipsis_len + 1) {
-				strcpy(str + max_len, elipsis);
-			}
-		}
-		mod_store(m, str);
 		waitpid(id, &rc, 0);
 		if (WIFEXITED(rc) && WEXITSTATUS(rc)) {
 			fputs("mpc status failed\n", stderr);
 			mod_set_exit(m);
 			continue;
 		}
+		if (read == -1 || strstr(str, "volume: ") == str) {
+			mod_store(m, NULL);
+			sleep(1);
+			continue;
+		}
+		str[read - 1] = '\0';
+		const unsigned max_len = 30;
+		const char *elipsis = "…";
+		const size_t elipsis_len = strlen(elipsis);
+		if ((size_t)read > max_len + elipsis_len + 1) {
+			strcpy(str + max_len, elipsis);
+		}
+		mod_store(m, str);
 
 		id = fork();
 		if (id == -1)
